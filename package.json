@@ -1,0 +1,19 @@
+{
+  "name": "avscout",
+  "private": true,
+  "version": "0.1.0",
+  "description": "AVScout monorepo",
+  "workspaces": [
+    "frontend"
+  ],
+  "scripts": {
+    "frontend:dev": "npm --workspace frontend run dev",
+    "frontend:build": "npm --workspace frontend run build",
+    "frontend:start": "npm --workspace frontend run start",
+    "frontend:test": "npm --workspace frontend test"
+  },
+  "engines": {
+    "node": ">=20.9.0",
+    "npm": ">=10.0.0"
+  }
+}
