@@ -1,12 +1,15 @@
-PYTHON ?= backend/.venv/bin/python
+UV ?= uv
 
-.PHONY: backend-dev backend-test frontend-dev frontend-build frontend-start frontend-test
+.PHONY: backend-install backend-dev backend-test frontend-dev frontend-build frontend-start frontend-test
 
 backend-dev:
-	$(PYTHON) backend/run.py
+	$(UV) run --project backend --dev python backend/run.py
 
 backend-test:
-	$(PYTHON) -m pytest backend/tests
+	$(UV) run --project backend --dev pytest backend/tests
+
+backend-install:
+	$(UV) sync --project backend --dev
 
 frontend-dev:
 	npm run frontend:dev

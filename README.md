@@ -6,6 +6,7 @@ recommendations. The repository is split into a Python API and a Next.js web app
 ## Requirements
 
 - Python 3.11 or newer
+- uv 0.11 or newer
 - Node.js 20.9 or newer
 - npm 10 or newer
 
@@ -15,8 +16,7 @@ From the repository root:
 
 ```bash
 cp .env.example .env
-python -m venv backend/.venv
-backend/.venv/bin/python -m pip install -e "backend[dev]"
+uv sync --project backend --dev
 npm install
 ```
 
@@ -27,7 +27,7 @@ the key will be used by the query and explanation features added later.
 Start the applications in separate terminals:
 
 ```bash
-backend/.venv/bin/python backend/run.py
+uv run --project backend --dev python backend/run.py
 npm run frontend:dev
 ```
 
@@ -38,11 +38,12 @@ The API is available at `http://localhost:8000` and the web app at
 ## Tests
 
 ```bash
-backend/.venv/bin/python -m pytest backend/tests
+uv run --project backend --dev pytest backend/tests
 npm run frontend:test
 ```
 
-The same commands are available through `make backend-test` and
+The backend environment can also be synchronized with `make backend-install`.
+The test commands are available through `make backend-test` and
 `make frontend-test` when GNU Make is installed.
 
 ## Repository layout
