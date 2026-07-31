@@ -9,8 +9,18 @@
   "scripts": {
     "frontend:dev": "npm --workspace frontend run dev",
     "frontend:build": "npm --workspace frontend run build",
+    "frontend:format:check": "npm --workspace frontend run format:check",
+    "frontend:lint": "npm --workspace frontend run lint",
     "frontend:start": "npm --workspace frontend run start",
-    "frontend:test": "npm --workspace frontend test"
+    "frontend:test": "npm --workspace frontend test",
+    "frontend:typecheck": "npm --workspace frontend run typecheck",
+    "quality:backend": "npm run quality:backend:format && npm run quality:backend:lint && npm run quality:backend:typecheck && npm run quality:backend:test",
+    "quality:backend:format": "uv run --project backend --dev ruff format --check backend",
+    "quality:backend:lint": "uv run --project backend --dev ruff check backend",
+    "quality:backend:test": "uv run --project backend --dev pytest backend/tests",
+    "quality:backend:typecheck": "uv run --project backend --dev mypy backend",
+    "quality:frontend": "npm run frontend:format:check && npm run frontend:lint && npm run frontend:typecheck && npm run frontend:test && npm run frontend:build",
+    "quality": "npm run quality:backend && npm run quality:frontend"
   },
   "engines": {
     "node": ">=20.9.0",
