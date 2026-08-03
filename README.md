@@ -35,6 +35,19 @@ The API is available at `http://localhost:8000` and the web app at
 `http://localhost:3000`. The API health check is available at
 `http://localhost:8000/health`.
 
+## Acquire Wyscout data
+
+Acquire the five 2017/18 domestic leagues from the public Wyscout dataset:
+
+```bash
+make data-acquire-wyscout
+```
+
+The command writes raw archives, extracted league JSON files, and an integrity
+manifest to `data/wyscout/`. The manifest records the Figshare collection and
+version, CC BY 4.0 attribution, download URLs, byte sizes, and SHA-256/MD5
+checksums. Raw data and generated artifacts are ignored by Git.
+
 ## Docker development
 
 Start both applications with Docker Compose:
