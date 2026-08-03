@@ -1,6 +1,6 @@
 UV ?= uv
 
-.PHONY: backend-install backend-dev backend-test frontend-dev frontend-build frontend-start frontend-test
+.PHONY: backend-install backend-dev backend-test frontend-dev frontend-build frontend-start frontend-test quality
 
 backend-dev:
 	$(UV) run --project backend --dev python backend/run.py
@@ -22,3 +22,6 @@ frontend-start:
 
 frontend-test:
 	npm run frontend:test
+
+quality:
+	npm run quality

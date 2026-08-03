@@ -46,6 +46,24 @@ The backend environment can also be synchronized with `make backend-install`.
 The test commands are available through `make backend-test` and
 `make frontend-test` when GNU Make is installed.
 
+Run the complete local merge gate from the repository root:
+
+```bash
+npm run quality
+```
+
+This runs formatting checks, linting, type checking, tests, and the frontend
+production build for both applications. GitHub Actions runs the same
+`quality:backend` and `quality:frontend` commands for pull requests and pushes
+to the shared branches.
+
+Development guidance is split across:
+
+- `AGENTS.md` for agent workflow and repository rules.
+- `CONTEXT.md` for product, architecture, and domain constraints.
+- `CONTRIBUTING.md` for branch, commit, and pull request conventions.
+- `.github/pull_request_template.md` for the review checklist.
+
 ## Repository layout
 
 ```text
