@@ -1,5 +1,17 @@
 # Agent Instructions
 
+## Repository Bootstrap
+
+- Before reading project documentation or planning work, inspect the current
+  worktree and recent history with `git status --short --branch`,
+  `git log --oneline --decorate -10`, and `git reflog -10`.
+- Check whether a merge, rebase, checkout, fast-forward, or external worktree
+  change may have occurred before treating any previously read instructions as
+  current.
+- After any operation or external change that can alter `HEAD`, the branch, or
+  the worktree, reread `AGENTS.md`, `CONTEXT.md`, `README.md`, and applicable
+  nested guidance before continuing.
+
 ## Project Guidance
 
 - Read `CONTEXT.md`, `README.md`, and the relevant source files before changing code.
