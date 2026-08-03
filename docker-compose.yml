@@ -23,7 +23,7 @@ services:
     build:
       context: .
       dockerfile: docker/frontend.Dockerfile
-    command: npm --workspace frontend run dev -- --hostname 0.0.0.0
+    command: sh -c "npm ci --prefer-offline && npm --workspace frontend run dev -- --hostname 0.0.0.0"
     environment:
       NEXT_PUBLIC_API_URL: ${NEXT_PUBLIC_API_URL:-http://localhost:8000}
     ports:
@@ -31,10 +31,12 @@ services:
     volumes:
       - .:/workspace
       - frontend-node-modules:/workspace/node_modules
+      - frontend-npm-cache:/root/.npm
       - frontend-next:/workspace/frontend/.next
 
 volumes:
   backend-data:
   backend-venv:
   frontend-next:
+  frontend-npm-cache:
   frontend-node-modules:

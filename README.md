@@ -46,8 +46,9 @@ docker compose up --build
 
 The repository is mounted into both containers, so backend and frontend source
 changes are picked up without rebuilding. Dependency caches and local analytical
-data use named volumes. Secrets, raw datasets, and generated artifacts are not
-copied into either image.
+data use named volumes. The frontend synchronizes dependencies with `npm ci` at
+startup, so lockfile changes take effect after restarting the container. Secrets,
+raw datasets, and generated artifacts are not copied into either image.
 
 ## Tests
 
