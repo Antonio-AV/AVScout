@@ -35,6 +35,23 @@ The API is available at `http://localhost:8000` and the web app at
 `http://localhost:3000`. The API health check is available at
 `http://localhost:8000/health`.
 
+## Docker development
+
+Start both applications with Docker Compose:
+
+```bash
+cp .env.example .env
+docker compose up --build
+```
+
+The backend workspace and frontend source are mounted into their respective
+containers, so source changes are picked up without rebuilding. The frontend
+receives only its source and npm manifests, keeping the root `.env` out of that
+container. Dependency caches and local analytical data use named volumes. The
+frontend synchronizes dependencies with `npm ci` at startup, so lockfile changes
+take effect after restarting the container. Secrets, raw datasets, and generated
+artifacts are not copied into either image.
+
 ## Tests
 
 ```bash
