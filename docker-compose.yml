@@ -29,7 +29,9 @@ services:
     ports:
       - "3000:3000"
     volumes:
-      - .:/workspace
+      - ./frontend:/workspace/frontend
+      - ./package.json:/workspace/package.json:ro
+      - ./package-lock.json:/workspace/package-lock.json:ro
       - frontend-node-modules:/workspace/node_modules
       - frontend-npm-cache:/root/.npm
       - frontend-next:/workspace/frontend/.next
