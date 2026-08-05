@@ -101,6 +101,9 @@ production build.
 - Use Python 3.11+ and keep public functions typed.
 - Keep the backend compatible with strict mypy and the Ruff configuration in
   `backend/pyproject.toml`.
+- Every Python function and method, including private, magic, and test functions,
+  must have an English Google-style docstring with `Args`, `Returns` or `Yields`,
+  and `Raises` when applicable. The backend quality gate checks this structure.
 - Test API contracts through FastAPI's public HTTP boundary.
 - Use deterministic fixtures and fake providers in tests.
 

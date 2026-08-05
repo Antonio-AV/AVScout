@@ -32,6 +32,14 @@ explain why the change is needed rather than restating the diff.
 Create commits at coherent milestones, not for every small edit. Never commit
 secrets, generated files, raw datasets, local databases, or failing work.
 
+## Documentation
+
+Every Python function and method, including private, magic, and test functions,
+must have an English Google-style docstring. Document inputs with `Args`, return
+values with `Returns` or `Yields`, and raised exceptions with `Raises` when
+applicable. The rule is checked by `npm run quality:backend:docstrings` and is
+included in `npm run quality` and GitHub Actions.
+
 ## Pull Requests
 
 Pull requests should be small, focused, and linked to their Linear issue. Use the

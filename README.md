@@ -83,7 +83,8 @@ npm run quality
 ```
 
 This runs formatting checks, linting, type checking, tests, and the frontend
-production build for both applications. GitHub Actions runs the same
+production build for both applications, including the backend docstring check.
+GitHub Actions runs the same
 `quality:backend` and `quality:frontend` commands for pull requests and pushes
 to the shared branches.
 

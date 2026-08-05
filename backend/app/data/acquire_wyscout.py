@@ -63,7 +63,19 @@ REQUIRED_FILES = tuple(
 
 
 def acquire(output_dir: Path = Path("data/wyscout")) -> Path:
-    """Download, verify, and extract the five supported domestic leagues."""
+    """Download, verify, and extract the five supported domestic leagues.
+
+    Args:
+        output_dir: Directory where raw assets, extracted files, and the
+            acquisition manifest are stored.
+
+    Returns:
+        The path to the written acquisition manifest.
+
+    Raises:
+        IntegrityError: If an asset is incomplete, changed, malformed, or
+            missing after extraction.
+    """
     output_dir.mkdir(parents=True, exist_ok=True)
     manifest_path = output_dir / "manifest.json"
     previous = _read_manifest(manifest_path)
@@ -108,6 +120,19 @@ def acquire(output_dir: Path = Path("data/wyscout")) -> Path:
 
 
 def _read_manifest(path: Path) -> dict[str, Any]:
+    """Read an existing acquisition manifest.
+
+    Args:
+        path: Path to the JSON manifest.
+
+    Returns:
+        The decoded manifest object, or an empty dictionary when no manifest
+        exists.
+
+    Raises:
+        IntegrityError: If the manifest cannot be decoded or is not a JSON
+            object.
+    """
     if not path.exists():
         return {}
     try:
@@ -120,6 +145,20 @@ def _read_manifest(path: Path) -> dict[str, Any]:
 
 
 def _download(asset: Asset, target: Path) -> dict[str, Any]:
+    """Download one asset to a temporary file and verify its integrity.
+
+    Args:
+        asset: Dataset asset and canonical source URL to download.
+        target: Final path for the downloaded asset.
+
+    Returns:
+        Integrity metadata containing the asset name, source URL, byte size,
+        SHA-256 digest, MD5 digest, and source ETag.
+
+    Raises:
+        IntegrityError: If the response is incomplete, its ETag does not
+            match, or the file cannot be written.
+    """
     temporary = target.with_name(f".{target.name}.part")
     temporary.unlink(missing_ok=True)
     request = Request(asset.url, headers={"User-Agent": "AVScout data acquisition"})
@@ -164,6 +203,20 @@ def _download(asset: Asset, target: Path) -> dict[str, Any]:
 
 
 def _verify_existing(path: Path, record: dict[str, Any]) -> None:
+    """Verify an existing file against manifest size and SHA-256 metadata.
+
+    Args:
+        path: Existing downloaded file to inspect.
+        record: Manifest record containing the expected size and SHA-256
+            digest.
+
+    Returns:
+        None.
+
+    Raises:
+        IntegrityError: If the manifest metadata is incomplete or the file
+            does not match it.
+    """
     expected_size = record.get("size_bytes")
     expected_sha256 = record.get("sha256")
     if not isinstance(expected_size, int) or not isinstance(expected_sha256, str):
@@ -177,6 +230,14 @@ def _verify_existing(path: Path, record: dict[str, Any]) -> None:
 
 
 def _sha256(path: Path) -> str:
+    """Calculate the SHA-256 digest of a file.
+
+    Args:
+        path: File whose contents should be hashed.
+
+    Returns:
+        The lowercase hexadecimal SHA-256 digest.
+    """
     digest = hashlib.sha256()
     with path.open("rb") as source:
         while chunk := source.read(1024 * 1024):
@@ -185,6 +246,15 @@ def _sha256(path: Path) -> str:
 
 
 def _etag_md5(etag: str | None) -> str | None:
+    """Extract an MD5 digest from a simple HTTP ETag.
+
+    Args:
+        etag: HTTP ETag value, optionally quoted or weakly prefixed.
+
+    Returns:
+        The normalized MD5 digest when the ETag is a 32-character hexadecimal
+        value, otherwise ``None``.
+    """
     if etag is None:
         return None
     value = etag.removeprefix("W/").strip('"')
@@ -194,6 +264,19 @@ def _etag_md5(etag: str | None) -> str | None:
 
 
 def _extract(asset: Asset, archive_path: Path, output_dir: Path) -> None:
+    """Safely extract the required domestic files from a ZIP archive.
+
+    Args:
+        asset: Archive asset being extracted, used in error messages.
+        archive_path: Path to the downloaded ZIP archive.
+        output_dir: Directory where the required JSON files are written.
+
+    Returns:
+        None.
+
+    Raises:
+        IntegrityError: If the archive is invalid or contains an unsafe path.
+    """
     try:
         with ZipFile(archive_path) as archive:
             root = output_dir.resolve()
@@ -211,6 +294,17 @@ def _extract(asset: Asset, archive_path: Path, output_dir: Path) -> None:
 
 
 def _validate_required_files(output_dir: Path) -> None:
+    """Ensure every supported league has matches and events files.
+
+    Args:
+        output_dir: Directory containing the extracted Wyscout files.
+
+    Returns:
+        None.
+
+    Raises:
+        IntegrityError: If one or more required league files are missing.
+    """
     missing = [name for name in REQUIRED_FILES if not (output_dir / name).is_file()]
     if missing:
         raise IntegrityError(
@@ -219,16 +313,38 @@ def _validate_required_files(output_dir: Path) -> None:
 
 
 def _timestamp() -> str:
+    """Return the current UTC time in ISO 8601 format.
+
+    Returns:
+        The current UTC timestamp with a trailing ``Z`` designator.
+    """
     return datetime.now(UTC).isoformat().replace("+00:00", "Z")
 
 
 def _write_json(path: Path, value: dict[str, Any]) -> None:
+    """Write a JSON object atomically to a file.
+
+    Args:
+        path: Destination path for the JSON document.
+        value: JSON-compatible object to serialize.
+
+    Returns:
+        None.
+    """
     temporary = path.with_name(f".{path.name}.part")
     temporary.write_text(json.dumps(value, indent=2, ensure_ascii=True) + "\n")
     os.replace(temporary, path)
 
 
 def main(argv: list[str] | None = None) -> int:
+    """Run the Wyscout acquisition command-line interface.
+
+    Args:
+        argv: Optional command-line arguments without the executable name.
+
+    Returns:
+        Zero when acquisition succeeds, or one when validation fails.
+    """
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument(
         "--output-dir",

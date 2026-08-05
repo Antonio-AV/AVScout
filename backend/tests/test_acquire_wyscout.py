@@ -13,12 +13,24 @@ from app.data.acquire_wyscout import main
 
 
 class FakeResponse:
+    """Minimal response object used to exercise the downloader boundary."""
+
     def __init__(
         self,
         content: bytes,
         content_length: int | None = None,
         etag: str | None = None,
     ) -> None:
+        """Create a readable response with optional integrity headers.
+
+        Args:
+            content: Bytes returned by the fake response.
+            content_length: Optional HTTP content length header.
+            etag: Optional HTTP ETag header.
+
+        Returns:
+            None.
+        """
         self._content = io.BytesIO(content)
         self.headers = {
             **({"Content-Length": str(content_length)} if content_length else {}),
@@ -26,16 +38,45 @@ class FakeResponse:
         }
 
     def __enter__(self) -> FakeResponse:
+        """Return this response as a context manager value.
+
+        Returns:
+            This fake response instance.
+        """
         return self
 
     def __exit__(self, *_args: Any) -> None:
+        """Close the in-memory response body.
+
+        Args:
+            *_args: Context manager exception details supplied by Python.
+
+        Returns:
+            None.
+        """
         self._content.close()
 
     def read(self, size: int = -1) -> bytes:
+        """Read bytes from the fake response body.
+
+        Args:
+            size: Maximum number of bytes to read, or ``-1`` for all bytes.
+
+        Returns:
+            The next bytes from the response body.
+        """
         return self._content.read(size)
 
 
 def zip_bytes(*names: str) -> bytes:
+    """Create an in-memory ZIP archive containing named JSON fixtures.
+
+    Args:
+        *names: Archive member names to create.
+
+    Returns:
+        The serialized ZIP archive bytes.
+    """
     output = io.BytesIO()
     with ZipFile(output, "w") as archive:
         for name in names:
@@ -46,6 +87,15 @@ def zip_bytes(*names: str) -> bytes:
 def test_acquire_downloads_assets_extracts_leagues_and_writes_manifest(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
+    """Acquire all assets and write the expected manifest and league files.
+
+    Args:
+        tmp_path: Temporary output directory supplied by pytest.
+        monkeypatch: Pytest patching fixture for the fake downloader.
+
+    Returns:
+        None.
+    """
     archives = {
         "https://ndownloader.figshare.com/files/14464622": zip_bytes(
             "matches_England.json",
@@ -65,6 +115,14 @@ def test_acquire_downloads_assets_extracts_leagues_and_writes_manifest(
     downloaded: list[str] = []
 
     def fake_urlopen(request: Any) -> FakeResponse:
+        """Return deterministic bytes for a requested asset URL.
+
+        Args:
+            request: URL request passed by the acquisition command.
+
+        Returns:
+            A fake response containing the requested fixture bytes.
+        """
         url = request.full_url
         downloaded.append(url)
         return FakeResponse(archives.get(url, b"{}"))
@@ -88,6 +146,15 @@ def test_acquire_downloads_assets_extracts_leagues_and_writes_manifest(
 def test_acquire_rejects_a_changed_existing_download(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
+    """Reject a previously acquired file after its contents change.
+
+    Args:
+        tmp_path: Temporary output directory supplied by pytest.
+        monkeypatch: Pytest patching fixture for the fake downloader.
+
+    Returns:
+        None.
+    """
     archives = {
         "https://ndownloader.figshare.com/files/14464622": zip_bytes(
             *(
@@ -104,6 +171,14 @@ def test_acquire_rejects_a_changed_existing_download(
     }
 
     def fake_urlopen(request: Any) -> FakeResponse:
+        """Return deterministic bytes for a requested asset URL.
+
+        Args:
+            request: URL request passed by the acquisition command.
+
+        Returns:
+            A fake response containing the requested fixture bytes.
+        """
         return FakeResponse(archives.get(request.full_url, b"{}"))
 
     monkeypatch.setattr("app.data.acquire_wyscout.urlopen", fake_urlopen)
@@ -116,10 +191,28 @@ def test_acquire_rejects_a_changed_existing_download(
 def test_acquire_rejects_a_truncated_response(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    monkeypatch.setattr(
-        "app.data.acquire_wyscout.urlopen",
-        lambda _request: FakeResponse(b"{}", content_length=3),
-    )
+    """Reject a response whose body is shorter than its content length.
+
+    Args:
+        tmp_path: Temporary output directory supplied by pytest.
+        monkeypatch: Pytest patching fixture for the fake downloader.
+
+    Returns:
+        None.
+    """
+
+    def fake_urlopen(_request: Any) -> FakeResponse:
+        """Return a deliberately truncated response.
+
+        Args:
+            _request: URL request ignored by this deterministic fixture.
+
+        Returns:
+            A response whose declared length exceeds its body.
+        """
+        return FakeResponse(b"{}", content_length=3)
+
+    monkeypatch.setattr("app.data.acquire_wyscout.urlopen", fake_urlopen)
 
     assert main(["--output-dir", str(tmp_path)]) == 1
 
@@ -130,10 +223,28 @@ def test_acquire_rejects_a_truncated_response(
 def test_acquire_rejects_a_source_checksum_mismatch(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    monkeypatch.setattr(
-        "app.data.acquire_wyscout.urlopen",
-        lambda _request: FakeResponse(b"{}", etag='"00000000000000000000000000000000"'),
-    )
+    """Reject a response whose bytes do not match its source ETag.
+
+    Args:
+        tmp_path: Temporary output directory supplied by pytest.
+        monkeypatch: Pytest patching fixture for the fake downloader.
+
+    Returns:
+        None.
+    """
+
+    def fake_urlopen(_request: Any) -> FakeResponse:
+        """Return bytes with an intentionally incorrect source ETag.
+
+        Args:
+            _request: URL request ignored by this deterministic fixture.
+
+        Returns:
+            A response whose body does not match its ETag.
+        """
+        return FakeResponse(b"{}", etag='"00000000000000000000000000000000"')
+
+    monkeypatch.setattr("app.data.acquire_wyscout.urlopen", fake_urlopen)
 
     assert main(["--output-dir", str(tmp_path)]) == 1
     assert not (tmp_path / "competitions.json").exists()

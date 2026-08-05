@@ -40,7 +40,7 @@ jobs:
       - name: Install frontend dependencies
         run: npm ci
 
-      - name: Run backend quality checks
+      - name: Run backend quality checks (including docstrings)
         run: npm run quality:backend
 
       - name: Run frontend quality checks

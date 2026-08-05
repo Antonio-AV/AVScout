@@ -19,7 +19,12 @@ app.add_middleware(
 
 @app.get("/health", tags=["system"])
 def health() -> dict[str, str]:
-    """Report whether the API process is ready to receive requests."""
+    """Report whether the API process is ready to receive requests.
+
+    Returns:
+        A JSON-compatible status object containing the service name,
+        environment, and readiness status.
+    """
 
     return {
         "status": "ok",
