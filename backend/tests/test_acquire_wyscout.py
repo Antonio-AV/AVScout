@@ -138,9 +138,14 @@ def test_acquire_downloads_assets_extracts_leagues_and_writes_manifest(
     assert manifest["license"]["name"] == "CC BY 4.0"
     assert len(manifest["files"]) == 5
     assert manifest["files"][0]["sha256"] == hashlib.sha256(b"{}").hexdigest()
+    assert (tmp_path / "metadata/competitions.json").exists()
+    assert (tmp_path / "metadata/players.json").exists()
+    assert (tmp_path / "metadata/teams.json").exists()
+    assert (tmp_path / "raw/matches.zip").exists()
+    assert (tmp_path / "raw/events.zip").exists()
     for league in ("England", "France", "Germany", "Italy", "Spain"):
-        assert (tmp_path / f"matches_{league}.json").exists()
-        assert (tmp_path / f"events_{league}.json").exists()
+        assert (tmp_path / f"matches/{league}.json").exists()
+        assert (tmp_path / f"events/{league}.json").exists()
 
 
 def test_acquire_rejects_a_changed_existing_download(
@@ -183,7 +188,7 @@ def test_acquire_rejects_a_changed_existing_download(
 
     monkeypatch.setattr("app.data.acquire_wyscout.urlopen", fake_urlopen)
     assert main(["--output-dir", str(tmp_path)]) == 0
-    (tmp_path / "competitions.json").write_bytes(b"changed")
+    (tmp_path / "metadata/competitions.json").write_bytes(b"changed")
 
     assert main(["--output-dir", str(tmp_path)]) == 1
 

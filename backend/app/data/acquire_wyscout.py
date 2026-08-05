@@ -22,17 +22,39 @@ class IntegrityError(RuntimeError):
 
 @dataclass(frozen=True)
 class Asset:
-    filename: str
+    """Describe a downloaded dataset asset and its local destination.
+
+    Attributes:
+        path: Relative path below the acquisition output directory.
+        url: Canonical source URL for the asset.
+        archive: Whether the asset is a ZIP archive to extract.
+        extract_dir: Relative output directory for extracted archive members.
+    """
+
+    path: str
     url: str
     archive: bool = False
+    extract_dir: str | None = None
 
 
 ASSETS = (
-    Asset("competitions.json", "https://ndownloader.figshare.com/files/15073685"),
-    Asset("teams.json", "https://ndownloader.figshare.com/files/15073697"),
-    Asset("players.json", "https://ndownloader.figshare.com/files/15073721"),
-    Asset("matches.zip", "https://ndownloader.figshare.com/files/14464622", True),
-    Asset("events.zip", "https://ndownloader.figshare.com/files/14464685", True),
+    Asset(
+        "metadata/competitions.json", "https://ndownloader.figshare.com/files/15073685"
+    ),
+    Asset("metadata/teams.json", "https://ndownloader.figshare.com/files/15073697"),
+    Asset("metadata/players.json", "https://ndownloader.figshare.com/files/15073721"),
+    Asset(
+        "raw/matches.zip",
+        "https://ndownloader.figshare.com/files/14464622",
+        True,
+        "matches",
+    ),
+    Asset(
+        "raw/events.zip",
+        "https://ndownloader.figshare.com/files/14464685",
+        True,
+        "events",
+    ),
 )
 
 SOURCE = {
@@ -56,9 +78,7 @@ LICENSE = {
 }
 
 REQUIRED_FILES = tuple(
-    f"{kind}_{league}.json"
-    for kind in ("matches", "events")
-    for league in ("England", "France", "Germany", "Italy", "Spain")
+    f"{league}.json" for league in ("England", "France", "Germany", "Italy", "Spain")
 )
 
 
@@ -83,8 +103,8 @@ def acquire(output_dir: Path = Path("data/wyscout")) -> Path:
     records: list[dict[str, Any]] = []
 
     for asset in ASSETS:
-        target = output_dir / asset.filename
-        previous_record = previous_files.get(asset.filename)
+        target = output_dir / asset.path
+        previous_record = previous_files.get(asset.path)
         if previous_record is not None and target.exists():
             _verify_existing(target, previous_record)
             record = previous_record
@@ -94,7 +114,11 @@ def acquire(output_dir: Path = Path("data/wyscout")) -> Path:
 
     for asset in ASSETS:
         if asset.archive:
-            _extract(asset, output_dir / asset.filename, output_dir)
+            if asset.extract_dir is None:
+                raise IntegrityError(
+                    f"archive has no extraction directory: {asset.path}"
+                )
+            _extract(asset, output_dir / asset.path, output_dir / asset.extract_dir)
     _validate_required_files(output_dir)
 
     manifest = {
@@ -159,6 +183,7 @@ def _download(asset: Asset, target: Path) -> dict[str, Any]:
         IntegrityError: If the response is incomplete, its ETag does not
             match, or the file cannot be written.
     """
+    target.parent.mkdir(parents=True, exist_ok=True)
     temporary = target.with_name(f".{target.name}.part")
     temporary.unlink(missing_ok=True)
     request = Request(asset.url, headers={"User-Agent": "AVScout data acquisition"})
@@ -178,22 +203,21 @@ def _download(asset: Asset, target: Path) -> dict[str, Any]:
                 md5.update(chunk)
         if expected_bytes is not None and byte_count != expected_bytes:
             raise IntegrityError(
-                f"{asset.filename}: expected {expected_bytes} bytes, received "
-                f"{byte_count}"
+                f"{asset.path}: expected {expected_bytes} bytes, received {byte_count}"
             )
         expected_md5 = _etag_md5(source_etag)
         if expected_md5 is not None and md5.hexdigest() != expected_md5:
-            raise IntegrityError(f"{asset.filename}: source ETag checksum mismatch")
+            raise IntegrityError(f"{asset.path}: source ETag checksum mismatch")
         os.replace(temporary, target)
     except IntegrityError:
         temporary.unlink(missing_ok=True)
         raise
     except OSError as exc:
         temporary.unlink(missing_ok=True)
-        raise IntegrityError(f"failed to download {asset.filename}: {exc}") from exc
+        raise IntegrityError(f"failed to download {asset.path}: {exc}") from exc
 
     return {
-        "name": asset.filename,
+        "name": asset.path,
         "url": asset.url,
         "size_bytes": byte_count,
         "sha256": sha256.hexdigest(),
@@ -278,19 +302,25 @@ def _extract(asset: Asset, archive_path: Path, output_dir: Path) -> None:
         IntegrityError: If the archive is invalid or contains an unsafe path.
     """
     try:
+        if asset.extract_dir is None:
+            raise IntegrityError(f"archive has no extraction directory: {asset.path}")
         with ZipFile(archive_path) as archive:
             root = output_dir.resolve()
             for member in archive.infolist():
                 destination = (output_dir / member.filename).resolve()
                 if root not in destination.parents and destination != root:
                     raise IntegrityError(
-                        f"unsafe path in {asset.filename}: {member.filename}"
+                        f"unsafe path in {asset.path}: {member.filename}"
                     )
+            prefix = f"{asset.extract_dir}_"
+            expected_members = {f"{prefix}{name}" for name in REQUIRED_FILES}
+            output_dir.mkdir(parents=True, exist_ok=True)
             for member in archive.infolist():
-                if member.filename in REQUIRED_FILES:
-                    archive.extract(member, output_dir)
+                if member.filename in expected_members:
+                    output_name = member.filename.removeprefix(prefix)
+                    (output_dir / output_name).write_bytes(archive.read(member))
     except BadZipFile as exc:
-        raise IntegrityError(f"{asset.filename} is not a valid ZIP archive") from exc
+        raise IntegrityError(f"{asset.path} is not a valid ZIP archive") from exc
 
 
 def _validate_required_files(output_dir: Path) -> None:
@@ -305,7 +335,12 @@ def _validate_required_files(output_dir: Path) -> None:
     Raises:
         IntegrityError: If one or more required league files are missing.
     """
-    missing = [name for name in REQUIRED_FILES if not (output_dir / name).is_file()]
+    missing = [
+        f"{directory}/{name}"
+        for directory in ("matches", "events")
+        for name in REQUIRED_FILES
+        if not (output_dir / directory / name).is_file()
+    ]
     if missing:
         raise IntegrityError(
             f"Wyscout archive is missing required files: {', '.join(missing)}"

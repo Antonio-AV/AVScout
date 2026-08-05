@@ -43,10 +43,20 @@ Acquire the five 2017/18 domestic leagues from the public Wyscout dataset:
 make data-acquire-wyscout
 ```
 
-The command writes raw archives, extracted league JSON files, and an integrity
-manifest to `data/wyscout/`. The manifest records the Figshare collection and
-version, CC BY 4.0 attribution, download URLs, byte sizes, and SHA-256/MD5
-checksums. Raw data and generated artifacts are ignored by Git.
+The command writes the following layout to `data/wyscout/`:
+
+```text
+data/wyscout/
+├── manifest.json
+├── metadata/             # competitions, players, and teams
+├── raw/                  # source ZIP archives kept as a local cache
+├── matches/              # extracted league match metadata
+└── events/               # extracted league events
+```
+
+The manifest records the Figshare collection and version, CC BY 4.0
+attribution, download URLs, byte sizes, and SHA-256/MD5 checksums. Raw data and
+generated artifacts are ignored by Git.
 
 ## Docker development
 
