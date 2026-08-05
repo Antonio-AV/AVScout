@@ -299,7 +299,8 @@ def _extract(asset: Asset, archive_path: Path, output_dir: Path) -> None:
         None.
 
     Raises:
-        IntegrityError: If the archive is invalid or contains an unsafe path.
+        IntegrityError: If the archive is invalid, incomplete, or contains an
+            unsafe path.
     """
     try:
         if asset.extract_dir is None:
@@ -314,6 +315,13 @@ def _extract(asset: Asset, archive_path: Path, output_dir: Path) -> None:
                     )
             prefix = f"{asset.extract_dir}_"
             expected_members = {f"{prefix}{name}" for name in REQUIRED_FILES}
+            actual_members = {member.filename for member in archive.infolist()}
+            missing_members = sorted(expected_members - actual_members)
+            if missing_members:
+                raise IntegrityError(
+                    f"{asset.path} is missing required members: "
+                    f"{', '.join(missing_members)}"
+                )
             output_dir.mkdir(parents=True, exist_ok=True)
             for member in archive.infolist():
                 if member.filename in expected_members:

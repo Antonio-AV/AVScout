@@ -193,6 +193,59 @@ def test_acquire_rejects_a_changed_existing_download(
     assert main(["--output-dir", str(tmp_path)]) == 1
 
 
+def test_acquire_rejects_an_archive_missing_a_previous_member(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """Reject a new archive instead of accepting stale extracted output.
+
+    Args:
+        tmp_path: Temporary output directory supplied by pytest.
+        monkeypatch: Pytest patching fixture for the fake downloader.
+
+    Returns:
+        None.
+    """
+    events_url = "https://ndownloader.figshare.com/files/14464685"
+    archives = {
+        "https://ndownloader.figshare.com/files/14464622": zip_bytes(
+            *(
+                f"matches_{league}.json"
+                for league in ("England", "France", "Germany", "Italy", "Spain")
+            )
+        ),
+        events_url: zip_bytes(
+            *(
+                f"events_{league}.json"
+                for league in ("England", "France", "Germany", "Italy", "Spain")
+            )
+        ),
+    }
+
+    def fake_urlopen(request: Any) -> FakeResponse:
+        """Return the currently configured archive fixture.
+
+        Args:
+            request: URL request passed by the acquisition command.
+
+        Returns:
+            A fake response containing the requested fixture bytes.
+        """
+        return FakeResponse(archives.get(request.full_url, b"{}"))
+
+    monkeypatch.setattr("app.data.acquire_wyscout.urlopen", fake_urlopen)
+    assert main(["--output-dir", str(tmp_path)]) == 0
+    (tmp_path / "raw/events.zip").unlink()
+    archives[events_url] = zip_bytes(
+        "events_England.json",
+        "events_France.json",
+        "events_Germany.json",
+        "events_Italy.json",
+    )
+
+    assert main(["--output-dir", str(tmp_path)]) == 1
+    assert (tmp_path / "events/Spain.json").exists()
+
+
 def test_acquire_rejects_a_truncated_response(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
