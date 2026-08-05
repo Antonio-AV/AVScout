@@ -235,6 +235,10 @@ artifacts/
 *.duckdb
 *.duckdb.wal
 
+# Source package named data is not generated output.
+!backend/app/data/
+!backend/app/data/*.py
+
 # Local tooling and test artifacts
 .DS_Store
 .pytest_cache/

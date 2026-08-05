@@ -35,6 +35,29 @@ The API is available at `http://localhost:8000` and the web app at
 `http://localhost:3000`. The API health check is available at
 `http://localhost:8000/health`.
 
+## Acquire Wyscout data
+
+Acquire the five 2017/18 domestic leagues from the public Wyscout dataset:
+
+```bash
+make data-acquire-wyscout
+```
+
+The command writes the following layout to `data/wyscout/`:
+
+```text
+data/wyscout/
+├── manifest.json
+├── metadata/             # competitions, players, and teams
+├── raw/                  # source ZIP archives kept as a local cache
+├── matches/              # extracted league match metadata
+└── events/               # extracted league events
+```
+
+The manifest records the Figshare collection and version, CC BY 4.0
+attribution, download URLs, byte sizes, and SHA-256/MD5 checksums. Raw data and
+generated artifacts are ignored by Git.
+
 ## Docker development
 
 Start both applications with Docker Compose:
@@ -70,7 +93,8 @@ npm run quality
 ```
 
 This runs formatting checks, linting, type checking, tests, and the frontend
-production build for both applications. GitHub Actions runs the same
+production build for both applications, including the backend docstring check.
+GitHub Actions runs the same
 `quality:backend` and `quality:frontend` commands for pull requests and pushes
 to the shared branches.
 
